@@ -69,7 +69,6 @@ const isInvalidId = (num: number): boolean => {
         return true;
       }
     }
-
   }
 
   return false;
