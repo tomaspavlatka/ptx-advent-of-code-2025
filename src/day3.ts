@@ -2,57 +2,36 @@ import { readLines } from "./shared/line-reader";
 
 export const part1 = (sample: boolean): number => {
   return getBanks(1, sample)
-    .map(getJoltageWith2)
+    .map((batteries) => getJoltage(batteries, 2))
     .reduce((a, b) => a + b, 0);
 }
 
-const getJoltageWith2 = (batteries: number[]): number => {
-  const maxIdx = getMax(batteries.slice(0, batteries.length - 1));
-  const maxIdx2 = getMax(batteries.slice(maxIdx + 1));
-
-  const val =  (10 * batteries[maxIdx]) + batteries[maxIdx + maxIdx2 + 1];
-
-  return val;
-}
-
-const getMax = (nums: number[]): number => {
-  let max = nums[0];
-  let idx = 0;
-
-  for (let i = 1; i < nums.length; i++) {
-    if (nums[i] > max) {
-      idx = i;
-      max = nums[i];
-    }
-  }
-
-  return idx;
+const getMaxIdx = (nums: number[]): number => {
+  return nums
+    .reduce((best, val, i) => (val > nums[best]) ? i : best , 0);
 }
 
 export const part2 = (sample: boolean): number => {
   return getBanks(2, sample)
-    .map(getJoltageWith12)
+    .map((batteries) => getJoltage(batteries, 12))
     .reduce((a, b) => a + b, 0);
 }
 
-const getJoltageWith12 = (batteries: number[]): number => {
-  let nums = [];
+const getJoltage = (batteries: number[], limit: number): number => {
+  let joltages = [];
 
   let cursor = 0;
-  for (let i = 11; i >= 0; i--) {
-    let maxIdx: number;
-    if (i > 0) {
-      maxIdx = getMax(batteries.slice(cursor, i * -1));
-    } else {
-      maxIdx = getMax(batteries.slice(cursor));
-    }
+  for (let i = limit; i > 0; i--) {
+    const end = batteries.length - i + 1;
+    const slice = batteries.slice(cursor, end);
 
-    nums.push(batteries[maxIdx + cursor]);
+    const maxIdx = getMaxIdx(slice);
 
+    joltages.push(slice[maxIdx]);
     cursor += maxIdx + 1;
   }
 
-  return +nums.join("");
+  return Number(joltages.join(""));
 }
 
 
