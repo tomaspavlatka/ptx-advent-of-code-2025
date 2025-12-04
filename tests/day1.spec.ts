@@ -1,6 +1,6 @@
 import { part1, part2 } from "@src/day1";
 
-describe('day 1', () => {
+describe('day1', () => {
   it('part 1, sample', () => {
     expect(part1(true)).toBe(3);
   });
