@@ -6,8 +6,8 @@ export const part1 = (sample: boolean): number => {
 
   let total = 0;
   for (let col = 0; col < indexes.length; col++) {
-    const colOperation = operations.get(col) || '+';
-    if (colOperation == '+') {
+    const operation = operations.get(col) || '+';
+    if (operation == '+') {
       total += [...Array(rows + 1).keys()]
         .map(row => numbers.get(toStringCoord(row, col)) || 0)
       .reduce((a, b) => a += b, 0);
