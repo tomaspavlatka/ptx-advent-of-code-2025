@@ -2,18 +2,18 @@ import { readLines } from "./shared/line-reader";
 import { toStringCoord } from "./shared/maze";
 
 export const part1 = (sample: boolean): number => {
-  const worksheet = getWorksheet(1, sample);
+  const {indexes, rows, numbers, operations } = getWorksheet(1, sample);
 
   let total = 0;
-  for (let col = 0; col < worksheet.indexes.length; col++) {
-    const colOperation = worksheet.operations.get(col) || '+';
+  for (let col = 0; col < indexes.length; col++) {
+    const colOperation = operations.get(col) || '+';
     if (colOperation == '+') {
-      total += [...Array(worksheet.rows + 1).keys()]
-        .map(row => worksheet.numbers.get(toStringCoord(row, col)) || 0)
+      total += [...Array(rows + 1).keys()]
+        .map(row => numbers.get(toStringCoord(row, col)) || 0)
       .reduce((a, b) => a += b, 0);
     } else {
-      total += [...Array(worksheet.rows + 1).keys()]
-        .map(row => worksheet.numbers.get(toStringCoord(row, col)) || 0)
+      total += [...Array(rows + 1).keys()]
+        .map(row => numbers.get(toStringCoord(row, col)) || 0)
       .reduce((a, b) => a *= b, 1);
     }
   }
@@ -22,36 +22,32 @@ export const part1 = (sample: boolean): number => {
 }
 
 export const part2 = (sample: boolean): number => {
-  const worksheet = getWorksheet(2, sample);
+  const { indexes, rows, maze, operations, cols } = getWorksheet(2, sample);
 
-  let total = 0;
-  for (let i = 0; i < worksheet.indexes.length; i++) {
-    const start = worksheet.indexes[i];
-    const end = i < worksheet.indexes.length - 1 ? worksheet.indexes[i+1] - 2 : worksheet.cols;
+  return [...Array(indexes.length).keys()]
+    .map(idx => ({
+      operation: operations.get(idx) || '+',
+      start: indexes[idx],
+      end: idx < indexes.length - 1 ? indexes[idx + 1] - 2 : cols
+    }))
+  .map(({ start, end, operation }) => {
+    const groups = [...Array(end - start + 1).keys()]
+      .map(col => [...Array(rows + 1).keys()]
+        .map(row => maze.get(toStringCoord(row, start + col)))
+        .filter(symbol => symbol && symbol != ' ' && symbol != '+' && symbol != '+')
+      );
 
-    const reals = [];
-    for (let col = start; col <= end; col++) {
-      const nums: number[] = [];
-      for (let row = 0; row <= worksheet.rows; row++) {
-        const val = worksheet.maze.get(toStringCoord(row, col));
-        if (val != undefined && val != ' ' && val != '+' && val != '*') {
-          nums.push(Number(val));
-        }
-      }
-      reals.push(nums);
-    }
-
-    const d = reals.map(nums => Number(nums.join('')));
-
-    const operator = worksheet.operations.get(i);
-    if (operator == '+') {
-      total += d.reduce((a,b) => a += b, 0);
-    } else {
-      total += d.reduce((a,b) => a *= b, 1);
-    }
-  }
-
-  return total;
+    return {groups, operation};
+  })
+  .map(({ groups, operation }) => ({
+    operation, 
+    numbers: groups.map(nums => Number(nums.join('')))
+  }))
+  .map(({operation, numbers}) => operation == '+' 
+    ? numbers.reduce((a,b) => a += b, 0)
+    : numbers.reduce((a,b) => a *= b, 1)
+  )
+  .reduce((a,b) => a += b, 0);
 }
 
 const getWorksheet = (part: number, sample: boolean): Worksheet => {
