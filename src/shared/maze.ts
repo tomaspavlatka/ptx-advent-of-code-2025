@@ -38,7 +38,7 @@ export const getMaze = (day: number, part: number, sample: boolean): Maze => {
   }
 }
 
-const toStringCoord = (row: number, col: number): string => {
+export const toStringCoord = (row: number, col: number): string => {
   return `r${row}-c${col}`;
 }
 

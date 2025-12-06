@@ -25,22 +25,14 @@ export const part2 = (sample: boolean): number => {
 
 const getPlan = (part: number, sample: boolean): Plan => {
   const lines = readLines(5, part, sample);
+  const idx = lines.indexOf("");
 
-  const ranges: Range[] = [];
-  const ingredients: number[] = [];
+  const ranges = lines.slice(0, idx).map(line => {
+    const [min, max] = line.split("-").map(Number);
+    return { min, max };
+  });
 
-  let shouldIgredients = false;
-  for (const line of lines) {
-    if (line.length == 0) {
-      shouldIgredients = true;
-    } else if (!shouldIgredients) {
-      const range = line.split('-').map(Number);
-
-      ranges.push({min: range[0], max: range[1]});
-    } else {
-      ingredients.push(Number(line))
-    }
-  }
+  const ingredients = lines.slice(idx + 1).map(Number);
 
   return { ranges, ingredients };
 }
