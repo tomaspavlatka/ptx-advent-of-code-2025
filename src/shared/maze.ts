@@ -70,7 +70,7 @@ export const moveInDirection = (coord: string, dir: Direction): string => {
 
 }
 
-const toCoordinates = (coord: string): Coordinates => {
+export const toCoordinates = (coord: string): Coordinates => {
   const [row, col] = coord.split('-');
 
   return {
