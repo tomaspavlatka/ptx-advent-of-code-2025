@@ -1,90 +1,179 @@
 import { readLines } from "./shared/line-reader";
 
-class DSU {
-  parent = new Map<string, string>();
-  size   = new Map<string, number>();
-
-  ensure(x: string) {
-    if (!this.parent.has(x)) {
-      this.parent.set(x, x);
-      this.size.set(x, 1);
-    }
-  }
-
-  find(x: string): string {
-    if (this.parent.get(x) !== x) {
-      this.parent.set(x, this.find(this.parent.get(x)!));
-    }
-
-    return this.parent.get(x)!;
-  }
-
-  union(a: string, b: string) {
-    let pa = this.find(a);
-    let pb = this.find(b);
-    if (pa === pb) return;
-
-    // union by size: attach smaller under larger
-    if (this.size.get(pa)! < this.size.get(pb)!) {
-      [pa, pb] = [pb, pa];
-    }
-
-    this.parent.set(pb, pa);
-    this.size.set(pa, this.size.get(pa)! + this.size.get(pb)!);
-  }
-}
-
 export const part1 = (sample: boolean): number => {
-  const numbers = getNumbers(1, sample);
+  const points = getPoints(1, sample)
+    .map((point) => ({point, circuit: -1}));
 
-  const diffs = [...Array(numbers.length).keys()].map(i => {
-    return [...Array(numbers.length).keys()].map(j => {
-      return i <= j ? undefined : {
-        distance: countDistance(numbers[i], numbers[j]),
-        point1: toPointString(numbers[i]),
-        point2: toPointString(numbers[j])
+  const distances: Map<number, PointInCircuit[][]> = new Map();
+  
+  for (let i = 0; i < points.length; i++) {
+    for (let j = i + 1; j < points.length; j++) {
+      const distance = countDistance(points[i].point, points[j].point);
+
+      const point1 = points[i];
+      const point2 = points[j];
+
+      let current = distances.get(distance) || [];
+      current.push([point1, point2]);
+
+      distances.set(distance, current);
+    }
+  }
+
+  const data = [...distances.entries()].sort((a, b) => a[0] - b[0]);
+
+
+  let circuitIdx = 0;
+  const cicruits: Map<number, CustomSet<PointInCircuit>> = new Map();
+
+  const limit = sample ? 10 : 1000;
+  for (let i = 0; i < limit; i++) {
+    const [_, pairs] = data[i];
+    for (let [point1, point2] of pairs) {
+      if (point1.circuit === -1 && point2.circuit === -1) {
+        point1.circuit = circuitIdx;
+        point2.circuit = circuitIdx;
+
+        const set = new CustomSet<PointInCircuit>(point => `${point.point.x}-${point.point.y}-${point.point.z}`);
+        set.add(point1);
+        set.add(point2);
+        cicruits.set(circuitIdx, set);
+        circuitIdx++;
+      } else if (point1.circuit != -1 && point2.circuit === -1) {
+        point2.circuit = point1.circuit;
+        cicruits.get(point1.circuit!)!.add(point2);
+      } else if (point2.circuit != -1 && point1.circuit === -1) {
+        point1.circuit = point2.circuit;
+        cicruits.get(point2.circuit!)!.add(point1);
+      } else if (point1.circuit! != point2.circuit!) {
+        const legacyCircuit = point2.circuit!;
+        const targetCircuit = point1.circuit!;
+
+        const toMove = cicruits.get(legacyCircuit)!;
+        const target = cicruits.get(targetCircuit)!;
+
+        toMove.values().forEach((val) => {
+          val.circuit = targetCircuit;
+          target.add(val);
+        });
+
+        cicruits.delete(legacyCircuit);
+
+        if (cicruits.size === 1) {
+          return point1.point.x * point2.point.x;
+        }
       }
-    }).filter(val => val != undefined);
-  })
-  .reduce((a, b) => [...a, ...b], [])
-  .sort((a, b) => a.distance - b.distance)
-  .slice(0, sample ? 10 : 1000);;
-
-  const dsu = new DSU();
-
-  for (let diff of diffs) {
-    dsu.ensure(diff.point1);
-    dsu.ensure(diff.point2);
-    dsu.union(diff.point1, diff.point1);
+    }
   }
 
-  const groups = new Map<string, number>();
-
-  for (let p of numbers.map(toPointString)) {
-    dsu.ensure(p);
-  }
-
-  for (let p of numbers.map(toPointString)) {
-    const root = dsu.find(p);
-    groups.set(root, (groups.get(root) ?? 0) + 1);
-  }
-
-  console.log(groups);
-
-
-  return [...groups.values()]
+  return [...cicruits.values()]
+    .map((value) => value.size())
     .sort((a, b) => b - a)
     .slice(0, 3)
     .reduce((a, b) => a *= b, 1);
 }
 
-export const part2 = (sample: boolean): number => {
-  return 0;
+class CustomSet<T> {
+  private items: T[] = [];
+  private getKey: (item: T) => string;
+
+  constructor(getKey: (item: T) => string) {
+    this.getKey = getKey;
+  }
+
+  add(item: T): void {
+    const key = this.getKey(item);
+    if (!this.items.some(existing => this.getKey(existing) === key)) {
+      this.items.push(item);
+    }
+  }
+
+  has(item: T): boolean {
+    return this.items.some(existing => this.getKey(existing) === this.getKey(item)); 
+  }
+
+  values (): T[] {
+    return [...this.items];
+  }
+
+  size (): number {
+    return this.items.length;
+  }
 }
 
-const toPointString = (point: Point): string => {
-  return `${point.x}-${point.y}-${point.z}`;
-}
+export const part2 = (sample: boolean): number => {
+  const points = getPoints(2, sample)
+    .map(point => ({ point, circuit: -1 }));
+
+  const edges: { d: number; a: PointInCircuit; b: PointInCircuit }[] = [];
+
+  for (let i = 0; i < points.length; i++) {
+    for (let j = i + 1; j < points.length; j++) {
+      edges.push({
+        d: countDistance(points[i].point, points[j].point),
+        a: points[i],
+        b: points[j],
+      });
+    }
+  }
+
+  edges.sort((x, y) => x.d - y.d);
+
+  let circuitIdx = 0;
+  let components = points.length; 
+
+  const circuits = new Map<number, CustomSet<PointInCircuit>>();
+
+  for (const { a, b } of edges) {
+    // Already connected → ignore
+    if (a.circuit !== -1 && a.circuit === b.circuit) continue;
+
+    if (a.circuit === -1 && b.circuit === -1) {
+      const set = new CustomSet<PointInCircuit>(
+        p => `${p.point.x}-${p.point.y}-${p.point.z}`
+      );
+
+      a.circuit = b.circuit = circuitIdx;
+      set.add(a);
+      set.add(b);
+      circuits.set(circuitIdx++, set);
+
+      components--; // merged two components
+
+    } else if (a.circuit !== -1 && b.circuit === -1) {
+      b.circuit = a.circuit;
+      circuits.get(a.circuit)!.add(b);
+
+      components--; // merged
+    } else if (b.circuit !== -1 && a.circuit === -1) {
+      a.circuit = b.circuit;
+      circuits.get(b.circuit)!.add(a);
+
+      components--; // merged
+    } else {
+      const from = b.circuit!;
+      const to = a.circuit!;
+      const fromSet = circuits.get(from)!;
+      const toSet = circuits.get(to)!;
+
+      fromSet.values().forEach(p => {
+        p.circuit = to;
+        toSet.add(p);
+      });
+
+      circuits.delete(from);
+      components--; // merged two existing components
+    }
+
+    // THE ONLY CORRECT TERMINATION CHECK
+    if (components === 1) {
+      return a.point.x * b.point.x;
+    }
+  }
+
+  throw new Error("Graph never fully connected");
+};
+
 
 const countDistance = (point1: Point, point2: Point): number => {
   return Math.pow(point1.x - point2.x, 2)
@@ -93,7 +182,7 @@ const countDistance = (point1: Point, point2: Point): number => {
  ;
 }
 
-const getNumbers = (part: number, sample: boolean): Point[] => {
+const getPoints = (part: number, sample: boolean): Point[] => {
   return readLines(8, part, sample)
     .filter(Boolean)
     .map(line => line.split(','))
@@ -102,6 +191,11 @@ const getNumbers = (part: number, sample: boolean): Point[] => {
       y: Number(numbers[1]),
       z: Number(numbers[2]),
     }));
+}
+
+interface PointInCircuit {
+  circuit: number, 
+  point: Point
 }
 
 interface Point {
