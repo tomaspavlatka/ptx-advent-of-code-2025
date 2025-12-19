@@ -1,4 +1,5 @@
 import { readLines } from "./shared/line-reader";
+import { CustomSet } from "./shared/set";
 
 export const part1 = (sample: boolean): number => {
   const points = getPoints(1, sample)
@@ -71,34 +72,6 @@ export const part1 = (sample: boolean): number => {
     .sort((a, b) => b - a)
     .slice(0, 3)
     .reduce((a, b) => a *= b, 1);
-}
-
-class CustomSet<T> {
-  private items: T[] = [];
-  private getKey: (item: T) => string;
-
-  constructor(getKey: (item: T) => string) {
-    this.getKey = getKey;
-  }
-
-  add(item: T): void {
-    const key = this.getKey(item);
-    if (!this.items.some(existing => this.getKey(existing) === key)) {
-      this.items.push(item);
-    }
-  }
-
-  has(item: T): boolean {
-    return this.items.some(existing => this.getKey(existing) === this.getKey(item)); 
-  }
-
-  values (): T[] {
-    return [...this.items];
-  }
-
-  size (): number {
-    return this.items.length;
-  }
 }
 
 export const part2 = (sample: boolean): number => {
