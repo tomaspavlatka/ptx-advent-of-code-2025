@@ -1,7 +1,6 @@
 import { readLines } from "./shared/line-reader";
 import { Coordinates } from "./shared/maze";
 import { CustomSet } from "./shared/set";
-import { printGrid } from "./shared/grid";
 import { Queue } from "./shared/queue";
 
 export const part1 = (sample: boolean): number => {
@@ -23,22 +22,27 @@ export const part2 = (sample: boolean): number => {
   // 1 - Collect all rows and cols and sort them
   const rows = [
     ...reds.reduce((a, b) => a.add(b.row), new Set() as Set<number>).values()
-  ].sort((a, b) => a - b)
+  ].sort((a, b) => a - b);
 
   const cols = [
     ...reds.reduce((a, b) => a.add(b.col), new Set() as Set<number>).values()
-  ].sort((a, b) => a - b)
+  ].sort((a, b) => a - b);
 
+  const rowIndex: Map<number, number> = new Map();
+  rows.forEach((r, i) => rowIndex.set(r, i * 2));
+
+  const colIndex: Map<number, number> = new Map();
+  cols.forEach((r, i) => colIndex.set(r, i * 2));
 
   // 2 - Calculate spaces between each row and cols
   const rowSizes: Map<number, number> = new Map();
   for (let i = 0; i < rows.length - 1; i++) {
-    rowSizes.set(i * 2 + 1,  rows[i+1] - rows[i] -1)
+    rowSizes.set(i * 2 + 1, rows[i+1] - rows[i] -1)
   }
 
   const colSizes: Map<number, number> = new Map();
   for (let i = 0; i < cols.length - 1; i++) {
-    colSizes.set(i * 2 + 1,  cols[i + 1] - cols[i] - 1);
+    colSizes.set(i * 2 + 1, cols[i + 1] - cols[i] - 1);
   }
 
   // 3 - Calculate all the pairs of the points incl. the closing one
@@ -57,8 +61,8 @@ export const part2 = (sample: boolean): number => {
 
   // 5 - Fill the compressed grid with 1, the red position
   pairs.forEach(([point1, point2]) => {
-    const [col1, col2] = [cols.indexOf(point1.col) * 2, cols.indexOf(point2.col) * 2].sort((a, b) => a - b);
-    const [row1, row2] = [rows.indexOf(point1.row) * 2, rows.indexOf(point2.row) * 2].sort((a, b) => a - b);
+    const [row1, row2] = [rowIndex.get(point1.row)!, rowIndex.get(point2.row)!].sort((a, b) => a - b);
+    const [col1, col2] = [colIndex.get(point1.col)!, colIndex.get(point2.col)!].sort((a, b) => a - b);
 
     for (let col = col1; col <= col2; col++) {
       for (let row = row1; row <= row2; row++) {
@@ -115,11 +119,63 @@ export const part2 = (sample: boolean): number => {
     }
   }
 
-  printGrid(grid); // we are good until here
+  // 8 - Construct prefix sum array (psa), and populate
+  const psa = grid.map(row => [...row]);
+  for (let row = 0; row < grid.length; row++) {
+    for (let col = 0; col < grid[0].length; col++) {
+      psa[row][col] = countPsa(row, col, psa);
+    }
+  }
 
-  return 0;
+  // 9 - Find all the combinations
+  const squares: Coordinates[][] = [];
+  let max = 0;
+  for (let i = 0; i < reds.length; i++) {
+    for (let j = i + 1; j < reds.length; j++) {
+
+      const area = countSquare(reds[i], reds[j]);
+      if (max > area) {
+        continue;
+      }
+
+
+
+      squares.push([reds[i], reds[j]]);
+    }
+  }
+
+  return Math.max(
+    ...squares
+      .filter(s => valid(psa, s[0], s[1], rowIndex, colIndex))
+      .map(s => countSquare(s[0], s[1]))
+  );
+
 }
 
+const valid = (
+  psa: number[][], point1: Coordinates, point2: Coordinates, 
+  rowIndex: Map<number, number>, colIndex: Map<number, number>
+): boolean => {
+  const [row1, row2] = [rowIndex.get(point1.row)!, rowIndex.get(point2.row)!].sort((a, b) => a - b);
+  const [col1, col2] = [colIndex.get(point1.col)!, colIndex.get(point2.col)!].sort((a, b) => a - b);
+
+  const left = col1 > 0 ? psa[row2][col1 - 1] : 0;
+  const top = row1 > 0 ? psa[row1 - 1][col2] : 0;
+  const topleft = col1 > 0 && row1 > 0 ? psa[row1 - 1][col1 - 1] : 0;
+
+  const count = psa[row2][col2] - left - top + topleft;
+  const hash = (row2 - row1 + 1) * (col2 - col1 + 1);
+
+  return count === hash;
+}
+
+const countPsa = (row: number, col: number, psa: number[][]): number => {
+  const left = col > 0 ? psa[row][col - 1] : 0;
+  const top = row > 0 ? psa[row - 1][col] : 0;
+  const topleft = col > 0 && row > 0 ? psa[row - 1][col - 1] : 0;
+
+  return psa[row][col] + left + top - topleft;
+}
 
 const countSquare = (coord: Coordinates, coord1: Coordinates): number => {
   return (Math.abs(coord.row - coord1.row) + 1 ) * (Math.abs(coord.col - coord1.col) + 1);

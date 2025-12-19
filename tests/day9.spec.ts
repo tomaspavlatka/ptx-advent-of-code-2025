@@ -13,7 +13,7 @@ describe('day9', () => {
     expect(part2(true)).toBe(24);
   });
 
-  it('part 2', () => {
-    expect(part2(false)).toBe(5892);
+  it.only('part 2', () => {
+    expect(part2(false)).toBe(1562459680);
   });
 });
