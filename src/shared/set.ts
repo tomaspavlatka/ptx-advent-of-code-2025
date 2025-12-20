@@ -26,3 +26,32 @@ export class CustomSet<T> {
     return this.items.size;
   }
 }
+
+export const symmetricDiff = function<T>(a: Set<T>, b: Set<T>): Set<T> {
+  const result = new Set<T>();
+
+  for (const x of a) {
+    if (!b.has(x)) result.add(x);
+  }
+
+  for (const x of b) {
+    if (!a.has(x)) result.add(x);
+  }
+
+  return result;
+}
+
+export const equals = function<T>(a: Set<T>, b: Set<T>): boolean {
+  if (a.size != b.size) {
+    return false;
+  }
+
+  for (const x of a) {
+    if (!b.has(x)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
